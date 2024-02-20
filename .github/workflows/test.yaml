@@ -1,0 +1,71 @@
+name: tests
+
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+
+    env:
+      extensions: intl
+      key: cache-v1
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Publish version env var
+        run: echo GITHUB_SHA_SHORT=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-7) >> $GITHUB_ENV
+
+      - name: Setup cache environment
+        id: extcache
+        uses: shivammathur/cache-extensions@v1
+        with:
+          php-version: '8.1'
+          extensions: ${{ env.extensions }}
+          key: ${{ env.key }}
+
+      - name: Cache extensions
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.extcache.outputs.dir }}
+          key: ${{ steps.extcache.outputs.key }}
+          restore-keys: ${{ steps.extcache.outputs.key }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: ${{ env.extensions }}
+          tools: composer:v2
+        env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd src/
+          composer install --no-progress --prefer-dist --optimize-autoloader --no-scripts --no-plugins --no-interaction --ignore-platform-reqs
+
+      - name: Build docker image for tests
+        env:
+          IMAGE_NAME: ${{ secrets.CUSTOMER }}-${{ secrets.PROJECT }}
+          IMAGE_TAG: ${{ env.GITHUB_SHA_SHORT }}
+        run: |
+          docker build -f ./src/tests.Dockerfile -t $IMAGE_NAME:$IMAGE_TAG .
+          echo CONTAINER_IMAGE="$IMAGE_NAME:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Execute tests and generate and publish test coverage
+        run: |
+          mkdir -p ./reports
+          docker run -v $PWD/reports:/reports -w /project/src $CONTAINER_IMAGE vendor/bin/phpunit --coverage-clover /reports/clover.xml
+          docker run -v $PWD/reports:/reports \
+            -e CC_TEST_REPORTER_ID=${{ secrets.CC_TEST_REPORTER_ID }} \
+            -e GIT_BRANCH=develop \
+            -e GIT_COMMIT=${{ github.event.pull_request.head.sha }} \
+            $CONTAINER_IMAGE /cc-test-reporter format-coverage -t clover -o /reports/codeclimate.json /reports/clover.xml
+          docker run -v $PWD/reports:/reports \
+            -e CC_TEST_REPORTER_ID=${{ secrets.CC_TEST_REPORTER_ID }} \
+            -e GIT_BRANCH=develop \
+            -e GIT_COMMIT=${{ github.event.pull_request.head.sha }} \
+            $CONTAINER_IMAGE /cc-test-reporter upload-coverage -i /reports/codeclimate.json
