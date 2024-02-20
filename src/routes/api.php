@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\EventController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+Route::post('events', [EventController::class, 'store']);
+Route::put('events/{uuid}', [EventController::class, 'update'])->middleware('uuid.exists');
+Route::get('events', [EventController::class, 'list']);
+Route::delete('events/{uuid}', [EventController::class, 'delete'])->middleware('uuid.exists');
