@@ -1,0 +1,185 @@
+openapi: 3.0.0
+info:
+  title: Laravel Test
+  description:  <h3> Develop a calendar event management system which allows users to add, update, list and delete
+                events using REST APIs. 
+                <br> No authentication or authorization is required.
+                We will value your ability to apply the below rules on the corresponding layers following Domain
+                Driven Design. Ability to write unit tests or use of code quality/static analysis tools will be considered
+                a plus. </h3>
+  version: 1.0.0
+paths:
+  /events:
+    post:
+      summary: Create a new event
+      description: Create an API to create an event. This should also support recurring events. Following are the
+                    parameters that need to be captured. If the event somehow overlaps with another event, an error
+                    should be thrown.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInput'
+      responses:
+        '200':
+          description: Event created successfully
+    get:
+      summary: List events
+      description: Create an API endpoint to list all the events with pagination. This endpoint should be able to filter the result within a specific time range.
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter events starting from this date
+          example: "2024-02-20T00:00:00+00:00"
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter events ending until this date
+          example: "2024-02-29T23:59:59+00:00"
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+
+  /events/{uuid}:
+    put:
+      summary: Update an existing event
+      description: Create an API which allows the user to update an existing event. Similar to the create api, if the event
+                   overlaps with another event, an error should be thrown.
+      parameters:
+        - in: path
+          name: uuid
+          schema:
+            type: string
+          required: true
+          description: The unique identifier of the event to be updated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInputUpdate'
+      responses:
+        '200':
+          description: Event updated successfully
+        '404':
+          description: Event not found
+    delete:
+      summary: Delete an event
+      description: Create an API to delete an event.
+      parameters:
+        - in: path
+          name: uuid
+          schema:
+            type: string
+          required: true
+          description: The unique identifier of the event to be deleted
+      responses:
+        '200':
+          description: Event deleted successfully
+          
+components:
+  schemas:
+  
+    EventInput:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the event
+          example: "Example Event"
+        startDate:
+          type: string
+          format: date-time
+          description: The start date and time of the event
+          example: "2024-02-20T10:00:00+00:00"
+        endDate:
+          type: string
+          format: date-time
+          description: The end date and time of the event
+          example: "2024-02-20T12:00:00+00:00"
+        description:
+          type: string
+          description: The description of the event
+          example: "A detailed description of the event"
+        recurringPattern:
+          type: boolean
+          description: Whether the event is recurring
+          example: true
+        frequency:
+          type: string
+          enum: ["daily", "weekly", "monthly", "yearly"]
+          description: The frequency of recurrence
+          example: "weekly"
+        repeatUntil:
+          type: string
+          format: date-time
+          description: The end date for recurring events
+          example: "2024-12-31T23:59:59+00:00"
+          
+    EventInputUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the event
+          example: "Example Event"
+        startDate:
+          type: string
+          format: date-time
+          description: The start date and time of the event
+          example: "2024-02-20T10:00:00+00:00"
+        endDate:
+          type: string
+          format: date-time
+          description: The end date and time of the event
+          example: "2024-02-20T12:00:00+00:00"
+        description:
+          type: string
+          description: The description of the event
+          example: "A detailed description of the event"
+          
+    EventListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventResponse'
+        links:
+          type: object
+          properties:
+            first, last, prev, next:
+              type: string
+              format: uri
+              description: Links to navigate through paginated results
+
+    EventResponse:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: The unique identifier of the event
+        title:
+          type: string
+          description: The title of the event
+        startDate:
+          type: string
+          format: date-time
+          description: The start date and time of the event
+        endDate:
+          type: string
+          format: date-time
+          description: The end date and time of the event
+        description:
+          type: string
+          description: The description of the event
