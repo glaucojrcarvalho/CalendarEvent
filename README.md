@@ -1,4 +1,4 @@
-## UN1Q - Laravel Test: Calendar Event Management System
+## Calendar Event Management System
 
 **1. Project Overview**
 
